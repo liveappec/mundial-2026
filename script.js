@@ -1,8 +1,8 @@
 // ==========================================
 // CONFIGURACIÓN DE LA API
 // ==========================================
-// URL generada desde Google Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbzdSZSefABCbw1Yu2WxkLZgQVtMvx2ZopR16C5qvvypbOxoQM9FagWvWn6M7vXLv0de/exec";
+// URL oficial generada desde Google Apps Script
+const API_URL = "https://script.google.com/macros/s/AKfycbxSL1ufxbvHCXPl9W_C6LQ4KvzB0gyaCEfmiAdXqDp2HQOWIDZoZS4rssoSVVlUxIsI/exec";
 
 // ==========================================
 // LÓGICA DE INTERFAZ (UI)
@@ -81,21 +81,16 @@ async function handleRegister(event) {
         // Enviar la petición a la API
         const response = await fetch(API_URL, {
             method: "POST",
-            mode: "no-cors", // Requerido para evitar bloqueos del navegador en Apps Script inicialmente
+            mode: "no-cors", // Requerido por ahora para enviar datos a Apps Script sin bloqueos
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(requestData)
         });
 
-        // Como usamos "no-cors", fetch no nos devuelve el JSON directamente para leerlo.
-        // Debido a las restricciones de Google Apps Script, la forma más limpia de leer la respuesta 
-        // desde un front estático (sin servidor) y en modo no-cors es asumiendo que si la petición
-        // se envió sin errores de red, la procesamos.
-        // *NOTA TÉCNICA: En el siguiente paso optimizaremos Apps Script para permitir CORS total y leer el JSON de respuesta.
-        // Por ahora, mostraremos una alerta asumiendo envío exitoso o que el script validará y nos obligará a recargar.*
-        
-        alert("Petición enviada. Si tus datos son correctos, has sido registrado. (Optimizaremos las alertas en el próximo paso).");
+        // Como usamos "no-cors", el navegador envía los datos pero no nos deja leer el texto de respuesta por seguridad.
+        // Asumimos envío exitoso para esta prueba.
+        alert("Petición enviada. Revisa tu Google Sheets para confirmar si los datos llegaron correctamente.");
         
         // Limpiar el formulario
         event.target.reset();
@@ -139,7 +134,7 @@ async function handleLogin(event) {
             body: JSON.stringify(requestData)
         });
 
-        alert("Petición de inicio de sesión enviada.");
+        alert("Petición de inicio de sesión enviada. (Validación completa en la siguiente fase).");
 
     } catch (error) {
         console.error("Error en el login:", error);
