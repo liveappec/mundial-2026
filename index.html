@@ -8,16 +8,14 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header Premium -->
+    <!-- PANTALLA DE LOGIN / REGISTRO -->
+    <div class="app-container" id="auth-view">
         <header class="main-header">
             <h1 class="logo-title">MUNDIAL <span>2026</span></h1>
             <p class="subtitle">Quiniela Oficial</p>
         </header>
 
-        <!-- Contenedor de Formularios -->
         <main class="auth-box">
-            <!-- Selector de Acción -->
             <div class="auth-tabs">
                 <button class="tab-btn active" id="tab-login" onclick="toggleAuth('login')">Ya estoy inscrito</button>
                 <button class="tab-btn" id="tab-register" onclick="toggleAuth('register')">Registrarme</button>
@@ -26,12 +24,12 @@
             <!-- Formulario de Login -->
             <form id="form-login" class="auth-form active-form" onsubmit="handleLogin(event)">
                 <div class="input-group">
-                    <label for="login-cedula">Número de Cédula</label>
-                    <input type="text" id="login-cedula" required placeholder="Ej: 1001234567">
+                    <label>Número de Cédula</label>
+                    <input type="text" id="login-cedula" required>
                 </div>
                 <div class="input-group">
-                    <label for="login-celular">Celular (Clave)</label>
-                    <input type="password" id="login-celular" required placeholder="Sin el 0 inicial (Ej: 991234567)">
+                    <label>Celular (Clave)</label>
+                    <input type="password" id="login-celular" required>
                 </div>
                 <button type="submit" class="btn-primary">Ingresar a mi Quiniela</button>
             </form>
@@ -39,24 +37,51 @@
             <!-- Formulario de Registro -->
             <form id="form-register" class="auth-form hidden-form" onsubmit="handleRegister(event)">
                 <div class="input-group">
-                    <label for="reg-nombres">Nombres completos</label>
-                    <input type="text" id="reg-nombres" required placeholder="Tus nombres">
+                    <label>Nombres completos</label>
+                    <input type="text" id="reg-nombres" required>
                 </div>
                 <div class="input-group">
-                    <label for="reg-apellidos">Apellidos completos</label>
-                    <input type="text" id="reg-apellidos" required placeholder="Tus apellidos">
+                    <label>Apellidos completos</label>
+                    <input type="text" id="reg-apellidos" required>
                 </div>
                 <div class="input-group">
-                    <label for="reg-cedula">Número de Cédula</label>
-                    <input type="text" id="reg-cedula" required placeholder="Ej: 1001234567">
+                    <label>Número de Cédula</label>
+                    <input type="text" id="reg-cedula" required>
                 </div>
                 <div class="input-group">
-                    <label for="reg-celular">Celular (Será tu clave)</label>
-                    <input type="number" id="reg-celular" required placeholder="Sin el 0 inicial (Ej: 991234567)">
+                    <label>Celular (Clave)</label>
+                    <input type="number" id="reg-celular" required>
                 </div>
                 <button type="submit" class="btn-primary">Completar Registro</button>
             </form>
         </main>
+    </div>
+
+    <!-- PANTALLA DEL DASHBOARD (Calendario) -->
+    <div class="dashboard-container hidden-view" id="dashboard-view">
+        <header class="dash-header">
+            <div>
+                <h2>Hola, <span id="lbl-username">Usuario</span></h2>
+                <p>Tus Pronósticos: <strong id="lbl-stats">0/104</strong></p>
+            </div>
+            <button class="btn-logout" onclick="logout()">Salir</button>
+        </header>
+
+        <!-- Filtro de Fases -->
+        <div class="fase-selector">
+            <select id="select-fase" onchange="renderMatches()">
+                <option value="GRUPOS">Fase de Grupos</option>
+                <option value="RONDA DE 32">Ronda de 32</option>
+                <option value="OCTAVOS">Octavos de Final</option>
+                <option value="CUARTOS">Cuartos de Final</option>
+                <option value="SEMIFINAL">Semifinal</option>
+                <option value="TERCER PUESTO">Tercer Puesto</option>
+                <option value="FINAL">Final</option>
+            </select>
+        </div>
+
+        <!-- Contenedor dinámico de los partidos -->
+        <main id="matches-container"></main>
     </div>
 
     <script src="script.js"></script>
