@@ -1,7 +1,12 @@
-// Enlace oficial de la API de Google Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbwRpM0xImq4K80O5nZkozk5BX8hA7R-ugyi0u1k1NxMXYqYtU9YQ4Rg-FbuQUK1ECfx/exec";
+// ==========================================
+// CONFIGURACIÓN DE LA API (GOOGLE SHEETS)
+// ==========================================
+const API_URL = "https://script.google.com/macros/s/AKfycbxSl1ufxbvHCXP19W_C6LQ4KvzB0gyaCEfmiAdXqDp2HQOWIDZoZS4rssoSWV1UxIsI/exec";
 
-// Lógica para alternar entre Login y Registro
+// Variables globales del sistema
+let actualUser = null;
+
+// Lógica para alternar entre pantallas de Login y Registro
 function toggleAuth(type) {
     const loginForm = document.getElementById('form-login');
     const registerForm = document.getElementById('form-register');
@@ -27,30 +32,30 @@ function toggleAuth(type) {
     }
 }
 
-// Lógica para procesar el Registro de un nuevo participante
+// Lógica para procesar el Registro de un nuevo usuario
 async function handleRegister(event) {
     event.preventDefault();
     
-    const btn = event.target.querySelector('button');
-    const originalText = btn.innerText;
-    
-    // Captura de datos del formulario
     const nombres = document.getElementById('reg-nombres').value.trim();
     const apellidos = document.getElementById('reg-apellidos').value.trim();
     const cedula = document.getElementById('reg-cedula').value.trim();
     const celular = document.getElementById('reg-celular').value.trim();
 
-    // Estado visual de carga
+    // Cambiar el botón a estado de carga
+    const btn = event.target.querySelector('button');
+    const originalText = btn.innerText;
     btn.innerText = "Cargando...";
     btn.disabled = true;
 
     try {
         const response = await fetch(API_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Requerido para comunicarse con Google Apps Script de forma simple
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            mode: "cors",
+            headers: {
+                "Content-Type": "text/plain"
+            },
             body: JSON.stringify({
-                action: 'register',
+                action: "register",
                 nombres: nombres,
                 apellidos: apellidos,
                 cedula: cedula,
@@ -58,14 +63,17 @@ async function handleRegister(event) {
             })
         });
 
-        // Al usar 'no-cors' la respuesta viene opaca, asumimos éxito si no salta al catch
-        alert("¡Registro enviado con éxito! Ya puedes intentar iniciar sesión.");
-        event.target.reset();
-        toggleAuth('login');
-
+        const data = await response.json();
+        
+        if (data.status === "success") {
+            alert("¡Registro Exitoso! Tu código de participante es: " + data.codigo);
+            toggleAuth('login'); // Lo mandamos a loguearse
+        } else {
+            alert(data.message);
+        }
     } catch (error) {
-        console.error(error);
-        alert("Hubo un problema al procesar el registro. Inténtalo de nuevo.");
+        console.error("Error:", error);
+        alert("Error de conexión con el servidor. Verifica la configuración de la API.");
     } finally {
         btn.innerText = originalText;
         btn.disabled = false;
@@ -76,25 +84,40 @@ async function handleRegister(event) {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const btn = event.target.querySelector('button');
-    const originalText = btn.innerText;
-    
     const cedula = document.getElementById('login-cedula').value.trim();
     const celular = document.getElementById('login-celular').value.trim();
 
-    btn.innerText = "Verificando...";
+    const btn = event.target.querySelector('button');
+    const originalText = btn.innerText;
+    btn.innerText = "Ingresando...";
     btn.disabled = true;
 
     try {
-        // Para el login necesitamos leer datos reales de vuelta, usaremos una petición optimizada
-        const response = await fetch(`${API_URL}?action=login&cedula=${cedula}&celular=${celular}`);
+        const response = await fetch(API_URL, {
+            method: "POST",
+            mode: "cors",
+            headers: {
+                "Content-Type": "text/plain"
+            },
+            body: JSON.stringify({
+                action: "login",
+                cedula: cedula,
+                celular: celular
+            })
+        });
+
+        const data = await response.json();
         
-        // temporalmente pasamos directo mientras estructuramos la lectura completa en la fase 2
-        alert("Conexión establecida con éxito. Próxima fase: Carga del panel principal.");
-        
+        if (data.status === "success") {
+            actualUser = data.user;
+            alert("¡Bienvenido/a " + actualUser.nombres + "!");
+            // Aquí cargaremos el dashboard en los siguientes pasos
+        } else {
+            alert(data.message);
+        }
     } catch (error) {
-        console.error(error);
-        alert("Datos verificados. En la siguiente fase activaremos el ingreso al fixture completo.");
+        console.error("Error:", error);
+        alert("Error de conexión. Verifica las credenciales o la API.");
     } finally {
         btn.innerText = originalText;
         btn.disabled = false;
