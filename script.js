@@ -1,145 +1,235 @@
 // ==========================================
 // CONFIGURACIÓN DE LA API
 // ==========================================
-// URL oficial generada desde Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbxSL1ufxbvHCXPl9W_C6LQ4KvzB0gyaCEfmiAdXqDp2HQOWIDZoZS4rssoSVVlUxIsI/exec";
 
-// ==========================================
-// LÓGICA DE INTERFAZ (UI)
-// ==========================================
-// Alternar entre pestañas de Login y Registro
+// Variables globales para almacenar datos
+let currentUser = null;
+let globalPartidos = [];
+let globalPronosticos = {};
+
+// Diccionario de Banderas (Emojis) para darle estética premium y rápida
+const flags = {
+    "Ecuador": "🇪🇨", "México": "🇲🇽", "Argentina": "🇦🇷", "Brasil": "🇧🇷", "Colombia": "🇨🇴",
+    "Uruguay": "🇺🇾", "España": "🇪🇸", "Alemania": "🇩🇪", "Francia": "🇫🇷", "Inglaterra": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "EEUU": "🇺🇸", "Canadá": "🇨🇦", "Costa de Marfil": "🇨🇮", "Japón": "🇯🇵", "Corea del Sur": "🇰🇷",
+    "Holanda": "🇳🇱", "Portugal": "🇵🇹", "Bélgica": "🇧🇪", "Croacia": "🇭🇷", "Senegal": "🇸🇳",
+    "Marruecos": "🇲🇦", "Suiza": "🇨🇭", "Arabia Saudí": "🇸🇦", "Australia": "🇦🇺", "Paraguay": "🇵🇾",
+    "Turquía": "🇹🇷", "Catar": "🇶🇦", "Haití": "🇭🇹", "Escocia": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "Curasao": "🇨🇼",
+    "Suecia": "🇸🇪", "Túnez": "🇹🇳", "Cabo Verde": "🇨🇻", "Egipto": "🇪🇬", "Irán": "🇮🇷",
+    "Nueva Zelanda": "🇳🇿", "Irak": "🇮🇶", "Noruega": "🇳🇴", "Argelia": "🇩🇿", "Austria": "🇦🇹",
+    "Jordania": "🇯🇴", "Congo Democrático": "🇨🇩", "Ghana": "🇬🇭", "Panamá": "🇵🇦", "Uzbekistán": "🇺🇿",
+    "República Checa": "🇨🇿", "Sudáfrica": "🇿🇦", "Bosnia y Herzegovina": "🇧🇦"
+};
+
+function getFlag(teamName) {
+    return flags[teamName] || "🏳️"; // Bandera blanca si no se encuentra
+}
+
 function toggleAuth(type) {
-    const loginForm = document.getElementById('form-login');
-    const registerForm = document.getElementById('form-register');
-    const tabLogin = document.getElementById('tab-login');
-    const tabRegister = document.getElementById('tab-register');
-
-    if (type === 'login') {
-        loginForm.classList.remove('hidden-form');
-        loginForm.classList.add('active-form');
-        registerForm.classList.remove('active-form');
-        registerForm.classList.add('hidden-form');
-        
-        tabLogin.classList.add('active');
-        tabRegister.classList.remove('active');
-    } else {
-        registerForm.classList.remove('hidden-form');
-        registerForm.classList.add('active-form');
-        loginForm.classList.remove('active-form');
-        loginForm.classList.add('hidden-form');
-        
-        tabRegister.classList.add('active');
-        tabLogin.classList.remove('active');
-    }
+    document.getElementById('form-login').classList.toggle('hidden-form', type !== 'login');
+    document.getElementById('form-register').classList.toggle('hidden-form', type === 'login');
+    document.getElementById('tab-login').classList.toggle('active', type === 'login');
+    document.getElementById('tab-register').classList.toggle('active', type === 'register');
 }
 
-// Función auxiliar para cambiar el estado del botón durante la carga
-function setButtonLoading(button, isLoading, textNormal = "Procesando...") {
-    if (isLoading) {
-        button.disabled = true;
-        button.dataset.originalText = button.innerText;
-        button.innerText = "Cargando...";
-        button.style.opacity = "0.7";
-        button.style.cursor = "wait";
-    } else {
-        button.disabled = false;
-        button.innerText = button.dataset.originalText || textNormal;
-        button.style.opacity = "1";
-        button.style.cursor = "pointer";
-    }
+function setBtnLoading(btn, isLoad) {
+    btn.disabled = isLoad;
+    btn.innerText = isLoad ? "Cargando..." : (btn.dataset.text || "Aceptar");
 }
 
-// ==========================================
-// LÓGICA DE COMUNICACIÓN CON LA API
-// ==========================================
+async function fetchAPI(data) {
+    // Usamos text/plain para evitar errores de pre-vuelo de CORS en Google Apps Script
+    const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+    return await res.json();
+}
 
-// --- REGISTRO DE USUARIO ---
-async function handleRegister(event) {
-    event.preventDefault(); // Evita que la página se recargue
-    
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    setButtonLoading(submitBtn, true);
-
-    // Capturar los valores del formulario
-    const nombres = document.getElementById('reg-nombres').value;
-    const apellidos = document.getElementById('reg-apellidos').value;
-    const cedula = document.getElementById('reg-cedula').value;
-    const celular = document.getElementById('reg-celular').value;
-
-    // Estructurar los datos a enviar
-    const requestData = {
-        action: "register",
-        payload: {
-            nombres: nombres,
-            apellidos: apellidos,
-            cedula: cedula,
-            celular: celular
-        }
-    };
+// --- REGISTRO ---
+async function handleRegister(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.dataset.text = btn.innerText;
+    setBtnLoading(btn, true);
 
     try {
-        // Enviar la petición a la API
-        const response = await fetch(API_URL, {
-            method: "POST",
-            mode: "no-cors", // Requerido por ahora para enviar datos a Apps Script sin bloqueos
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(requestData)
+        const res = await fetchAPI({
+            action: "register",
+            payload: {
+                nombres: document.getElementById('reg-nombres').value,
+                apellidos: document.getElementById('reg-apellidos').value,
+                cedula: document.getElementById('reg-cedula').value,
+                celular: document.getElementById('reg-celular').value
+            }
+        });
+        alert(res.message);
+        if(res.success) {
+            e.target.reset();
+            toggleAuth('login');
+        }
+    } catch (err) { alert("Error de conexión."); }
+    setBtnLoading(btn, false);
+}
+
+// --- LOGIN Y CARGA DEL DASHBOARD ---
+async function handleLogin(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.dataset.text = btn.innerText;
+    setBtnLoading(btn, true);
+
+    try {
+        const res = await fetchAPI({
+            action: "login",
+            payload: {
+                cedula: document.getElementById('login-cedula').value,
+                celular: document.getElementById('login-celular').value
+            }
         });
 
-        // Como usamos "no-cors", el navegador envía los datos pero no nos deja leer el texto de respuesta por seguridad.
-        // Asumimos envío exitoso para esta prueba.
-        alert("Petición enviada. Revisa tu Google Sheets para confirmar si los datos llegaron correctamente.");
-        
-        // Limpiar el formulario
-        event.target.reset();
-        
-        // Regresar a la pestaña de Login
-        toggleAuth('login');
+        if(res.success) {
+            currentUser = res.user;
+            globalPartidos = res.partidos;
+            globalPronosticos = res.pronosticos || {};
+            
+            // Ocultar login, mostrar dashboard
+            document.getElementById('auth-view').classList.add('hidden-view');
+            document.getElementById('dashboard-view').classList.remove('hidden-view');
+            
+            document.getElementById('lbl-username').innerText = currentUser.nombres;
+            renderMatches(); // Dibujar partidos
+        } else {
+            alert(res.message);
+        }
+    } catch (err) { alert("Error al cargar los datos."); }
+    setBtnLoading(btn, false);
+}
 
-    } catch (error) {
-        console.error("Error en la petición:", error);
-        alert("Ocurrió un error al intentar conectarse al servidor.");
-    } finally {
-        setButtonLoading(submitBtn, false, "Completar Registro");
+// --- RENDERIZAR PARTIDOS ---
+function renderMatches() {
+    const container = document.getElementById('matches-container');
+    const faseFiltro = document.getElementById('select-fase').value;
+    container.innerHTML = "";
+
+    // Filtrar partidos por la fase seleccionada
+    const partidosFase = globalPartidos.filter(p => p.fase === faseFiltro);
+    
+    // Agrupar por Grupo (Ej: A, B, C)
+    const grupos = {};
+    partidosFase.forEach(p => {
+        if (!grupos[p.grupo]) grupos[p.grupo] = [];
+        grupos[p.grupo].push(p);
+    });
+
+    let html = "";
+    
+    // Ordenar los grupos alfabéticamente
+    Object.keys(grupos).sort().forEach(grupoKey => {
+        html += `<h3 class="grupo-title">Grupo ${grupoKey !== '-' ? grupoKey : faseFiltro}</h3>`;
+        
+        grupos[grupoKey].forEach(p => {
+            // Verificar si hay pronóstico previo
+            let miPronoL = globalPronosticos[p.id] ? globalPronosticos[p.id].local : "";
+            let miPronoV = globalPronosticos[p.id] ? globalPronosticos[p.id].visita : "";
+            
+            let dateObj = new Date(p.fecha);
+            let fechaStr = dateObj.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+            let isOpen = p.estado === "ABIERTO";
+
+            html += `
+            <div class="match-card">
+                <div class="match-header">
+                    <span>📅 ${fechaStr} - ⏰ ${p.hora}</span>
+                    <span class="match-status ${isOpen ? 'abierto' : 'cerrado'}">
+                        ${isOpen ? '● Abierto' : 'Bloqueado'}
+                    </span>
+                </div>
+                
+                <div class="teams-row">
+                    <div class="team local">
+                        <span class="flag">${getFlag(p.local)}</span> ${p.local}
+                    </div>
+                    
+                    <div class="score-inputs">
+                        <input type="number" id="l-${p.id}" class="score-input" value="${miPronoL}" ${!isOpen ? 'disabled' : ''} min="0">
+                        <span style="font-weight:bold; color:#94A3B8;">-</span>
+                        <input type="number" id="v-${p.id}" class="score-input" value="${miPronoV}" ${!isOpen ? 'disabled' : ''} min="0">
+                    </div>
+
+                    <div class="team visita">
+                        <span class="flag">${getFlag(p.visita)}</span> ${p.visita}
+                    </div>
+                </div>
+                
+                ${isOpen ? `<button class="btn-save-match" onclick="saveMatch(${p.id}, this)">Guardar Pronóstico</button>` : ''}
+            </div>
+            `;
+        });
+    });
+
+    container.innerHTML = html;
+    updateStats();
+}
+
+// --- GUARDAR PRONÓSTICO INDIVIDUAL ---
+async function saveMatch(id_partido, btnElement) {
+    const localVal = document.getElementById(`l-${id_partido}`).value;
+    const visitaVal = document.getElementById(`v-${id_partido}`).value;
+
+    if (localVal === "" || visitaVal === "") {
+        alert("Debes ingresar ambos goles.");
+        return;
+    }
+
+    const btnText = btnElement.innerText;
+    btnElement.innerText = "Guardando...";
+    btnElement.disabled = true;
+
+    try {
+        const res = await fetchAPI({
+            action: "save_pronostico",
+            payload: {
+                codigo: currentUser.codigo,
+                id_partido: id_partido,
+                goles_local: localVal,
+                goles_visita: visitaVal
+            }
+        });
+
+        if(res.success) {
+            btnElement.innerText = "¡Guardado ✔!";
+            btnElement.style.background = "#10B981";
+            btnElement.style.color = "white";
+            
+            // Actualizar memoria local
+            globalPronosticos[id_partido] = { local: localVal, visita: visitaVal };
+            updateStats();
+
+            setTimeout(() => {
+                btnElement.innerText = "Actualizar Pronóstico";
+                btnElement.style.background = "#f1f5f9";
+                btnElement.style.color = "var(--primary-blue)";
+                btnElement.disabled = false;
+            }, 2000);
+        }
+    } catch (err) {
+        alert("Error al guardar.");
+        btnElement.innerText = btnText;
+        btnElement.disabled = false;
     }
 }
 
-// --- INICIO DE SESIÓN ---
-async function handleLogin(event) {
-    event.preventDefault(); // Evita recargar
-    
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    setButtonLoading(submitBtn, true);
+// --- ACTUALIZAR CONTADOR ---
+function updateStats() {
+    const totalProno = Object.keys(globalPronosticos).length;
+    document.getElementById('lbl-stats').innerText = `${totalProno}/104`;
+}
 
-    const cedula = document.getElementById('login-cedula').value;
-    const celular = document.getElementById('login-celular').value;
-
-    const requestData = {
-        action: "login",
-        payload: {
-            cedula: cedula,
-            celular: celular
-        }
-    };
-
-    try {
-        const response = await fetch(API_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(requestData)
-        });
-
-        alert("Petición de inicio de sesión enviada. (Validación completa en la siguiente fase).");
-
-    } catch (error) {
-        console.error("Error en el login:", error);
-        alert("Ocurrió un error al intentar iniciar sesión.");
-    } finally {
-        setButtonLoading(submitBtn, false, "Ingresar a mi Quiniela");
-    }
+function logout() {
+    currentUser = null;
+    document.getElementById('auth-view').classList.remove('hidden-view');
+    document.getElementById('dashboard-view').classList.add('hidden-view');
+    document.getElementById('form-login').reset();
 }
