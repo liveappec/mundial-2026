@@ -1,7 +1,7 @@
 // ==========================================
 // CONFIGURACIÓN DE LA API (GOOGLE SHEETS)
 // ==========================================
-const API_URL = "https://script.google.com/macros/s/AKfycbxSl1ufxbvHCXP19W_C6LQ4KvzB0gyaCEfmiAdXqDp2HQOWIDZoZS4rssoSWV1UxIsI/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwRpM0xImq4K80O5nZkozk5BX8hA7R-ugyi0u1k1NxMXYqYtU9YQ4Rg-FbuQUK1ECfx/exec";
 
 // Variables globales del sistema
 let actualUser = null;
